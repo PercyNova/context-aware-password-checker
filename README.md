@@ -94,29 +94,6 @@ The application can be configured in several ways:
 - TOTP settings (expiration time, issuer name) in `app.py`
 - Session security settings and secret key in `app.py`
 
-## Deployment
-
-### Deploying to a Cloud Service
-
-#### Heroku
-
-1. Create a `Procfile` in the project root:
-   ```
-   web: gunicorn app:app
-   ```
-
-2. Add `gunicorn` to your requirements:
-   ```bash
-   pip install gunicorn
-   pip freeze > requirements.txt
-   ```
-
-3. Deploy to Heroku:
-   ```bash
-   heroku create your-app-name
-   git push heroku main
-   ```
-
 ### Security Considerations
 
 - Set a strong `SECRET_KEY` environment variable for production
