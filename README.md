@@ -52,7 +52,7 @@ This application consists of three main components:
    ```
 
 4. Add the password blacklist file:
-   - Download the `rockyou.txt` wordlist (or another password dictionary)
+   - Download the `rockyou.txt` wordlist [rockyou.txt  wordlist](https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt)
    - Place it in the project root directory
    - Note: If you don't have access to `rockyou.txt`, the application will still work but with reduced blacklist checking capabilities
 
@@ -93,14 +93,6 @@ The password strength criteria can be adjusted in the `strength_checker.py` file
    heroku create your-app-name
    git push heroku main
    ```
-
-#### Render
-
-1. Create an account on [render.com](https://render.com/)
-2. Connect your GitHub repository
-3. Create a new Web Service with these settings:
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn app:app`
 
 ### Integrating with an Existing Website
 
