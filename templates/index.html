@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Password Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      max-width: 500px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin: 15px 0 5px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="password"],
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 20px;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    /* Checklist styles */
+    .checklist {
+      margin-top: 10px;
+      list-style: none;
+      padding-left: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .checklist li {
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+    }
+
+    .circle {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      border-radius: 50%;
+      border: 2px solid #ccc;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+
+    .circle.valid {
+      background-color: #16a34a; /* green */
+      border-color: #16a34a;
+    }
+
+    .circle.invalid {
+      background-color: transparent;
+      border-color: #ccc;
+    }
+
+    #server-strength {
+      margin-top: 10px;
+      font-weight: bold;
+      padding: 5px;
+      border-radius: 4px;
+    }
+
+    #confirm-message {
+      margin-top: 5px;
+      font-style: italic;
+    }
+
+    #server-feedback {
+      padding-left: 20px;
+    }
+    
+    #server-feedback li {
+      margin-bottom: 5px;
+    }
+    
+    .rejected {
+      background-color: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #b91c1c;
+      padding: 8px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Create Account</h2>
+    <form id="registration-form">
+      <label for="first_name">First Name:</label>
+      <input type="text" id="first_name" name="first_name" required>
+
+      <label for="last_name">Last Name:</label>
+      <input type="text" id="last_name" name="last_name" required>
+
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="phone">Phone:</label>
+      <input type="tel" id="phone" name="phone" required>
+
+      <label for="address">Address:</label>
+      <textarea id="address" name="address" required></textarea>
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+
+      <ul class="checklist">
+        <li><span id="circle-length" class="circle"></span> At least 8 characters</li>
+        <li><span id="circle-uppercase" class="circle"></span> At least one uppercase letter</li>
+        <li><span id="circle-number" class="circle"></span> At least one number</li>
+        <li><span id="circle-special" class="circle"></span> At least one special character</li>
+      </ul>
+
+      <div id="server-strength"></div>
+      <ul id="server-feedback"></ul>
+
+      <label for="confirm_password">Confirm Password:</label>
+      <input type="password" id="confirm_password" name="confirm_password" required>
+      <div id="confirm-message"></div>
+
+      <button type="submit" id="submit-button">Register</button>
+    </form>
+  </div>
+
+  <script>
+      const form = document.getElementById("registration-form");
+      const firstNameInput = document.getElementById("first_name");
+      const lastNameInput = document.getElementById("last_name");
+      const emailInput = document.getElementById("email");
+      const pwdInput = document.getElementById("password");
+      const confirmInput = document.getElementById("confirm_password");
+      const confirmMessage = document.getElementById("confirm-message");
+      const submitButton = document.getElementById("submit-button");
+
+      // Circle indicators
+      const checklistCircles = {
+        length: document.getElementById("circle-length"),
+        uppercase: document.getElementById("circle-uppercase"),
+        number: document.getElementById("circle-number"),
+        special: document.getElementById("circle-special")
+      };
+
+      // Server feedback elements
+      const serverStrength = document.getElementById("server-strength");
+      const serverFeedback = document.getElementById("server-feedback");
+
+      let serverStatus = "Very Weak";
+
+      function updateChecklist(password) {
+        const isValid = {
+          length: password.length >= 8,
+          uppercase: /[A-Z]/.test(password),
+          number: /\d/.test(password),
+          special: /[^A-Za-z0-9]/.test(password)
+        };
+
+        const startedTyping = password.length > 0;
+
+        for (const key in checklistCircles) {
+          const el = checklistCircles[key];
+          el.classList.remove("valid", "invalid");
+
+          if (startedTyping) {
+            el.classList.add(isValid[key] ? "valid" : "invalid");
+          }
+        }
+
+        return Object.values(isValid).every(Boolean);
+      }
+
+      function checkPasswordsMatch() {
+        const pwdVal = pwdInput.value;
+        const confirmVal = confirmInput.value;
+
+        if (pwdVal.length === 0 || confirmVal.length === 0) {
+          confirmMessage.textContent = "";
+          return false;
+        }
+
+        if (pwdVal === confirmVal) {
+          confirmMessage.textContent = "Passwords match";
+          confirmMessage.style.color = "green";
+          return true;
+        } else {
+          confirmMessage.textContent = "Passwords do not match";
+          confirmMessage.style.color = "red";
+          return false;
+        }
+      }
+
+      function updateSubmitButton() {
+        const localPass = updateChecklist(pwdInput.value);
+        const matches = checkPasswordsMatch();
+        const strongEnough = ["Moderate", "Strong", "Very Strong"].includes(serverStatus) && serverStatus !== "Rejected";
+
+        submitButton.disabled = !(localPass && matches && strongEnough);
+      }
+
+      let debounceTimer = null;
+
+      // Inputs that might affect password validation
+      const contextInputs = [firstNameInput, lastNameInput, emailInput, pwdInput];
+      
+      function checkPasswordStrength() {
+        const password = pwdInput.value;
+        const firstName = firstNameInput.value;
+        const lastName = lastNameInput.value;
+        const email = emailInput.value;
+        
+        if (password.length === 0) {
+          serverStrength.textContent = "";
+          serverFeedback.innerHTML = "";
+          return;
+        }
+
+        updateChecklist(password);
+        
+        // Clear any existing "rejected" class
+        serverStrength.classList.remove("rejected");
+
+        fetch("/check_password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            password: password,
+            first_name: firstName,
+            last_name: lastName,
+            email: email
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          serverStatus = data.strength;
+
+          // Update strength display
+          serverStrength.textContent = `Server-rated Strength: ${data.strength}`;
+          
+          // Special handling for rejected passwords
+          if (data.strength === "Rejected") {
+            serverStrength.classList.add("rejected");
+          } else {
+            // Color based on strength
+            switch (data.strength) {
+              case "Very Strong":
+                serverStrength.style.color = "darkgreen";
+                break;
+              case "Strong":
+                serverStrength.style.color = "green";
+                break;
+              case "Moderate":
+                serverStrength.style.color = "orange";
+                break;
+              case "Weak":
+                serverStrength.style.color = "orangered";
+                break;
+              case "Very Weak":
+              default:
+                serverStrength.style.color = "red";
+                break;
+            }
+          }
+
+          // Show feedback messages
+          serverFeedback.innerHTML = "";
+          data.feedback.forEach(msg => {
+            const li = document.createElement("li");
+            li.textContent = msg;
+            serverFeedback.appendChild(li);
+          });
+
+          updateSubmitButton();
+        });
+      }
+      
+      // Add event listeners to all context inputs
+      contextInputs.forEach(input => {
+        input.addEventListener("input", () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(checkPasswordStrength, 500);
+        });
+      });
+
+      confirmInput.addEventListener("input", () => {
+        checkPasswordsMatch();
+        updateSubmitButton();
+      });
+
+      // Handle form submission
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        // Here you would normally submit the form if everything is valid
+        alert("Form would be submitted now!");
+      });
+
+      // Initial disable
+      submitButton.disabled = true;
+  </script>
+</body>
+</html>
