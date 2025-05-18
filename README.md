@@ -1,9 +1,10 @@
-# context-aware-password-checker
+# Context-Aware Authentication System
 
-A secure and context-aware password strength checker application built with Flask. This application provides real-time feedback on password strength and detects when users try to include personal information in their passwords.
+A secure and context-aware authentication system built with Flask. This application provides real-time feedback on password strength, detects when users try to include personal information in their passwords, and offers two-factor authentication via authenticator apps.
 
 ## Features
 
+### Password Authentication
 - **Real-time password strength analysis** with visual feedback
 - **Context-aware validation** that prevents users from including personal information in passwords
 - **Leetspeak detection** that identifies when users try to bypass filters using number/symbol substitutions
@@ -12,13 +13,21 @@ A secure and context-aware password strength checker application built with Flas
 - **Client-side validation** for basic requirements (length, character types)
 - **Password confirmation** to prevent typos during registration
 
+### Two-Factor Authentication (2FA)
+- **Time-based One-Time Password (TOTP)** support via authenticator apps
+- **QR code generation** for easy setup with authenticator apps
+- **Manual key provision** for cases where QR scanning isn't possible
+- **TOTP verification** to ensure proper setup before account creation
+- **Auto-regenerating codes** for enhanced security (expires after 5 minutes of inactivity)
+
 ## Technical Overview
 
-This application consists of three main components:
+This application consists of several main components:
 
-1. **Backend API (Flask)** - Handles password strength calculations and context-aware validation
-2. **Strength Checker Engine** - Analyzes passwords against multiple security criteria  
-3. **Frontend Interface** - Provides real-time feedback and visual indicators
+1. **Backend API (Flask)** - Handles authentication methods, password strength calculations, and TOTP generation
+2. **Strength Checker Engine** - Analyzes passwords against multiple security criteria
+3. **TOTP Implementation** - Generates and validates time-based one-time passwords
+4. **Frontend Interface** - Provides real-time feedback, visual indicators, and authentication options
 
 ## Installation
 
@@ -31,8 +40,8 @@ This application consists of three main components:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/password-strength-checker.git
-   cd password-strength-checker
+   git clone https://github.com/your-username/context-aware-authentication.git
+   cd context-aware-authentication
    ```
 
 2. Create and activate a virtual environment (optional but recommended):
@@ -51,10 +60,9 @@ This application consists of three main components:
    pip install -r requirements.txt
    ```
 
-4. Add the password blacklist file:
-   - Download the `rockyou.txt` wordlist [rockyou.txt  wordlist](https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt)
+4. Add the password blacklist file (optional for enhanced password security):
+   - Download the `rockyou.txt` wordlist [rockyou.txt wordlist](https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt)
    - Place it in the project root directory
-   - Note: If you don't have access to `rockyou.txt`, the application will still work but with reduced blacklist checking capabilities
 
 5. Run the application:
    ```bash
@@ -63,13 +71,28 @@ This application consists of three main components:
 
 6. Open your browser and navigate to `http://localhost:5000`
 
+## Authentication Options
+
+The application offers two authentication methods:
+
+### 1. Password-Based Authentication
+- Traditional password-based login with enhanced security measures
+- Real-time strength feedback during password creation
+- Protection against personal information inclusion
+
+### 2. Authenticator App (TOTP)
+- Password-less authentication using any TOTP-compatible authenticator app
+- Supports Google Authenticator, Authy, Microsoft Authenticator, and others
+- QR code scanning for quick setup
+- Manual key entry option for accessibility
+
 ## Configuration
 
-The password strength criteria can be adjusted in the `strength_checker.py` file:
+The application can be configured in several ways:
 
-- Modify entropy thresholds for different strength levels
-- Add or remove common patterns to check against
-- Customize feedback messages for different validation checks
+- Password strength criteria in the `strength_checker.py` file
+- TOTP settings (expiration time, issuer name) in `app.py`
+- Session security settings and secret key in `app.py`
 
 ## Deployment
 
@@ -94,59 +117,48 @@ The password strength criteria can be adjusted in the `strength_checker.py` file
    git push heroku main
    ```
 
-### Integrating with an Existing Website
+### Security Considerations
 
-To add this password checker to your existing website:
-
-1. Include the backend files:
-   - `app.py` (adapt the routes to your existing backend)
-   - `strength_checker.py`
-   
-2. Add the form HTML to your website page and update the API endpoint in the JavaScript
-
-3. Include the CSS styles from the `index.html` file
+- Set a strong `SECRET_KEY` environment variable for production
+- Always use HTTPS in production to protect authentication data in transit
+- Consider adding rate limiting to prevent brute force attacks
+- In production, replace the in-memory storage with a proper database
 
 ## How It Works
 
-### Password Strength Checking
+### Password Authentication Flow
 
-The application uses multiple criteria to evaluate password strength:
+1. User enters personal information and password
+2. Client-side validation checks basic requirements
+3. Server-side validation provides detailed strength analysis
+4. Context-aware checks prevent use of personal information
+5. Password is verified against common password lists
+6. Entropy calculation determines final strength rating
 
-1. **Length** - Longer passwords are generally stronger
-2. **Character variety** - Mix of uppercase, lowercase, numbers, and symbols
-3. **Entropy calculation** - Mathematical measurement of randomness
-4. **Pattern detection** - Checks for common patterns and sequences
-5. **Blacklist checking** - Compares against known common passwords
-6. **Personal information detection** - Ensures passwords don't contain user details
+### TOTP Authentication Flow
 
-### Context-Aware Validation
-
-The application checks if passwords contain:
-- First name
-- Last name
-- Email username
-- Variations using leetspeak substitutions (e.g., replacing 'a' with '@' or '4')
+1. User enters personal information and selects TOTP authentication
+2. Server generates a random secret key
+3. QR code is displayed for scanning with authenticator app
+4. User verifies setup by entering a generated code
+5. Upon verification, account is created with TOTP as authentication method
+6. Future logins require a fresh code from the authenticator app
 
 ## Security Notes
 
-- This application is designed to enhance password security but should be part of a larger security strategy
-- Always use HTTPS in production to protect password data in transit
-- Consider adding rate limiting to prevent brute force attacks
-- The application does not store passwords; it only evaluates their strength
+- TOTP secrets automatically expire after 5 minutes of inactivity
+- QR codes are generated client-side using the QRious library
+- The application does not store passwords in plaintext
+- In production, implement proper database storage for user data
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
-
-- Password strength calculation inspired by NIST guidelines
-- Entropy calculation methodology based on information theory principles
-- Leetspeak detection patterns from common substitution practices
-
 ## Future Improvements
 
-- Add more sophisticated pattern recognition
-- Implement machine learning for better password strength prediction
+- Add support for additional 2FA methods (SMS, email)
+- Implement account recovery options
+- Add biometric authentication support for compatible devices
 - Support for multiple languages and internationalization
-- Additional visualization options for password strength metrics
+- Enhanced security logging and monitoring
