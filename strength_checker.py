@@ -1,31 +1,37 @@
 import math
 import string
 import re
+import os
 
-# Load Blacklist into a set
-def load_blacklist(*filepaths):
-    blacklist = set()
-    for filepath in filepaths:
-        with open(filepath, 'r', encoding='utf-8', errors='ignore') as file:
-            for line in file:
-                pwd = line.strip().lower()
-                if pwd:
-                    blacklist.add(pwd)
-    return blacklist
+def load_blacklist(filepath):
+    if not os.path.isfile(filepath):
+        print(f"Warning: blacklist file {filepath} not found, skipping.")
+        return set()
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as file:
+        return set(line.strip() for line in file)
 
-# Load both split files
+# Get the absolute path to the current directory (where this script is located)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+filename = 'rockyou.txt'
+filepath = os.path.join(script_dir, filename)
+
 BLACKLIST = set()
-for i in range(1, 11):
-    BLACKLIST.update(load_blacklist(f'rockyou{i}.txt'))
+if os.path.exists(filepath):
+    print(f"Loading blacklist file: {filepath}")
+    BLACKLIST.update(load_blacklist(filepath))
+else:
+    print(f"Blacklist file not found: {filepath}")
+    # Continue without blacklist - we'll use other security measures
+
 
 # Leet speak substitutions dictionary
 LEET_SUBS = {
-    '0': 'o', 
+    '0': 'o',
     '1': ['i', 'l'],
-    '3': 'e', 
-    '4': 'a', 
-    '8': 'b', 
-    '@': 'a', 
+    '3': 'e',
+    '4': 'a',
+    '8': 'b',
+    '@': 'a',
     '$': 's'
 }
 
@@ -44,31 +50,31 @@ def contains_personal_info(password, personal_info, normalized=False):
     """Check if password contains any personal information"""
     if not password or not personal_info:
         return False
-    
+
     pwd = normalize_leetspeak(password) if normalized else password.lower()
-    
+
     for info in personal_info:
         if info and len(info) > 2:  # Only check meaningful personal info
             info = info.lower()
             if info in pwd:
                 return True
-    
+
     return False
 
 def check_password_strength_with_context(password, first_name="", last_name="", email=""):
     """Check password strength with context awareness"""
     feedback = []
-    
+
     # Check for personal information in the password (both regular and leetspeak)
     personal_info = [first_name, last_name]
     if email and "@" in email:
         username = email.split("@")[0]
         personal_info.append(username)
-    
+
     # Regular check
     if contains_personal_info(password, personal_info):
         return "Rejected", ["Password contains your personal information. Choose something more private."]
-    
+
     # Leetspeak check
     if contains_personal_info(password, personal_info, normalized=True):
         return "Rejected", ["Password contains your personal information (using number/symbol substitutions). Choose something more private."]
@@ -122,9 +128,7 @@ def check_password_strength_with_context(password, first_name="", last_name="", 
         charset_size += len(string.punctuation)
 
     entropy = length * math.log2(charset_size) if charset_size > 0 else 0
-    
-    # Add entropy to feedback, but with reduced expectation
-    feedback.append(f"Password entropy: {entropy:.2f} bits.")
+
 
     # Adjusted entropy-based strength classification with lower thresholds
     if entropy < 35:
@@ -150,28 +154,28 @@ def check_website_password(password, first_name="", last_name="", email=""):
         # Direct containment check
         if first_name and first_name.lower() in password.lower():
             return "Rejected", [f"Password contains your first name ({first_name}). Choose something more private."]
-        
+
         if last_name and last_name.lower() in password.lower():
             return "Rejected", [f"Password contains your last name ({last_name}). Choose something more private."]
-        
+
         if email and "@" in email:
             username = email.split("@")[0].lower()
             if username in password.lower():
                 return "Rejected", [f"Password contains part of your email ({username}). Avoid using personal info."]
-        
+
         # Leetspeak detection for personal information
         normalized_pwd = normalize_leetspeak(password)
-        
+
         if first_name and first_name.lower() in normalized_pwd:
             return "Rejected", [f"Password contains your first name with number/symbol substitutions. Choose something more private."]
-        
+
         if last_name and last_name.lower() in normalized_pwd:
             return "Rejected", [f"Password contains your last name with number/symbol substitutions. Choose something more private."]
-        
+
         if email and "@" in email:
             username = email.split("@")[0].lower()
             if username in normalized_pwd:
                 return "Rejected", [f"Password contains part of your email with number/symbol substitutions. Avoid using personal info."]
-    
+
     # If no personal info is detected, proceed with standard strength check
     return check_password_strength_with_context(password, first_name, last_name, email)
